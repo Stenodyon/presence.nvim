@@ -82,10 +82,15 @@ function Presence:setup(options)
     local separator = package.config:sub(1,1)
     local wsl_distro_name = os.getenv("WSL_DISTRO_NAME")
     local os_name = self.get_os_name(uname)
+    local shell_sep = "&&"
+    if os.getenv("SHELL") == "/usr/bin/nu" then
+        shell_sep = "; "
+    end
     self.os = {
         name = os_name,
         is_wsl = uname.release:lower():find("microsoft") ~= nil,
         path_separator = separator,
+        shell_and = shell_sep
     }
 
     -- Print setup message with OS information
@@ -414,7 +419,7 @@ function Presence:get_project_name(file_path)
     -- Might want to run this in a background process depending on performance
     local project_path_cmd = "git rev-parse --show-toplevel"
     project_path_cmd = file_path
-        and string.format([[cd "%s" && %s]], file_path, project_path_cmd)
+        and string.format([[cd "%s" %s %s]], file_path, self.os.shell_and, project_path_cmd)
         or project_path_cmd
 
     local project_path = vim.fn.system(project_path_cmd)
@@ -699,7 +704,7 @@ function Presence:get_buttons(buffer, parent_dirpath)
         local path = parent_dirpath:gsub([["]], [[\"]])
         local git_url_cmd = "git config --get remote.origin.url"
         local cmd = path
-            and string.format([[cd "%s" && %s]], path, git_url_cmd)
+            and string.format([[cd "%s" %s %s]], path, self.os.shell_and, git_url_cmd)
             or git_url_cmd
 
         -- Trim and coerce empty string value to null
